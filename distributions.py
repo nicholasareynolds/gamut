@@ -9,6 +9,7 @@
 ###############################################################################
 import scipy.stats
 import numpy as np
+import sys
 
 class CandidateDistributions:
     """
@@ -35,10 +36,9 @@ class CandidateDistributions:
 
     def _calc_results(self, dist_obj, samples):
         """Store samples; calc. quantiles, perform regression for dist_obj."""
-
         results = scipy.stats.probplot(samples,
                                        dist=dist_obj.get_label(),
-                                       sparams=(*dist_obj.get_shapes()))
+                                       sparams=(dist_obj.get_shapes() ))
         dist_obj.feed_pplot_data(results[0], results[1])
 
 
@@ -91,8 +91,11 @@ class SciPyContDist():
         self.shapes      = dict()
 
 
-    def get_dist_name(self):
+    def get_label(self):
         return self.label
+
+    def get_shape_count(self):
+        return self.shape_count
 
     
     def get_loc(self):
@@ -112,21 +115,24 @@ class SciPyContDist():
 
 
     def set_shapes(self, values):
-        e = [self.set_shape(value, ii) for ii, value in enumerate(values)]
+        [self.set_shape(value, ii) for ii, value in enumerate(values)]
 
 
     def set_shape(self, value, index):
         if index >= self.shape_count:
             print("Error, specified index exceeds shape count")
             sys.exit()
-        name = "shape" + int(index)
-        self.shapes.update({name = value})       
+        name = "shape" + str(index + 1)
+        self.shapes.update({name : value})       
 
 
     def get_shapes(self):
         shape_vals = (v for k,v in self.shapes.items())
         return shape_vals
 
+
+    def get_r2(self):
+        return self.r2
 
     def feed_pplot_data(self,
                         plot_data,
@@ -162,9 +168,16 @@ class SciPyContDist():
                                      shape_count=len(shapes))
         self.fit_obj.set_shapes(*shapes)
         
-        self.scipy_obj = eval("scipy.stats.%s(*shapes,loc=loc,scale=scale"
-                              % self.get_label() )
+        # Assemble scipy call string
+        self.scipy_command = "scipy.stats.%s(" % self.get_label()
+        for shape in shapes:
+            self.scipy_command += "%10.6e, " % shape
+        self.scipy_command += "loc=%10.6e, scale=%10.6e)" % (loc, scale)
+        
+        self.scipy_obj = eval(self.scipy_command)
 
+    def get_scipy_command(self):
+        return self.scipy_command
 
     def create_pplot(self, axes):
         """Draw probabaility plot of data on 'axes'"""
