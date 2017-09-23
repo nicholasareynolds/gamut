@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import numpy as np
 import scipy.stats as stats
 from distributions import CandidateDistributions, SciPyContDist
+from shapefactordialog import ShapeFactorBoundsWindow
 import matplotlib
 matplotlib.rcParams['backend'] = "Qt5Agg"
 matplotlib.rcParams['font.size'] = 6
@@ -9,7 +10,7 @@ matplotlib.use("Qt5Agg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import sys
-
+import datetime
 
 pyVer = sys.version_info[0]  # i.e. 2 or 3
 if pyVer < 3:
@@ -111,7 +112,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # PPCC Button
         self.PPCCButton = QtWidgets.QPushButton()
         self.PPCCButton.setEnabled(False)
-        self.PPCCButton.setText("PPCC")
+        self.PPCCButton.setText("Calculate PPCC")
         self.PPCCButton.clicked.connect(self.calcPPCC)
 
 
@@ -119,14 +120,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.rmAllButton = QtWidgets.QPushButton()
         self.rmAllButton.setEnabled(False)
         self.rmAllButton.setText("Remove All")
+        # action
+        self.rmAllButton.clicked.connect(self.rmAllDistributions)
         
         self.rmButton = QtWidgets.QPushButton()
         self.rmButton.setEnabled(False)
         self.rmButton.setText("Remove")
-        
+        # action
+        self.rmButton.clicked.connect(self.rmDistribution)
+
         self.addButton = QtWidgets.QPushButton()
         self.addButton.setEnabled(False)
         self.addButton.setText("Add")
+        # actions
+        self.addButton.clicked.connect(self.addDistByButton)
+
         
         # Candidate Distributions
         self.probPlotLabel = QtWidgets.QLabel()
@@ -143,6 +151,10 @@ class MainWindow(QtWidgets.QMainWindow):
                                                        "Shape 3",
                                                        "Shape 4"])
         self.candDistsTable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.candDistsTable.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        # Actions
+        self.candDistsTable.itemDoubleClicked.connect(self.makePPlot)
+        #self.candDistsTable.itemClicked.connect(self.enableMLE)
                 
         # MLE Label
         self.mleLabel = QtWidgets.QLabel()
@@ -152,11 +164,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.scipyCallButton = QtWidgets.QPushButton()
         self.scipyCallButton.setEnabled(False)
         self.scipyCallButton.setText("SciPy Call")
+        self.scipyCallButton.clicked.connect(self.showScipyDef)
         
         # PDF/CDF
         self.pdfcdfButton = QtWidgets.QPushButton()
         self.pdfcdfButton.setEnabled(False)
         self.pdfcdfButton.setText("PDF/CDF")
+        self.pdfcdfButton.clicked.connect(self.makePDFCDF)
 
         # Spacers
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
@@ -440,22 +454,14 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
         return row_index
 
 
-    def updateShape1(self, value):
-        self.shape1Changed = False
-        self.shape1Value
-
     def calcPPCC(self):
         dist_name = self.scipyDistsList.currentItem().text()
-        print(self.shape1Value)
-        ShapeFactorBoundsWindow(self,
-                                self.samples,
-                                dist_name,
-                                self.shape1Value,
-                                self.shape1Changed)
-        print(self.shape1Value)
-        if self.shape1Changed == True:
-            self.shape1Changed = False
-            self.shape1Text.setText(str(self.shape1Value))
+        dialog = ShapeFactorBoundsWindow(self,
+                                         self.samples,
+                                         dist_name)
+        if dialog.exec_():
+            value = dialog.getValue()
+            self.shape1Text.setText(str(value))
 
     def addDistByButton(self):
         """Instantiate obj. from highlighted item; add to cand. distr. table."""
@@ -482,19 +488,19 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
                                    self.shape2Text,
                                    self.shape3Text,
                                    self.shape4Text]):
+
             try:
                 shape_factors.append( float(textBox.text()) )
             except ValueError:
                 self.statusbar.showMessage("All shape factors must be validly defined")
                 return
-            
+
         # Ready-to-go
         self.statusbar.clearMessage()
-        dist_obj = SciPyContDist(label=dist_name,
-                                 shape_count=num_shape_facs)
-        dist_obj.set_shapes(*shape_factors)
-        dist_obj.MLE_fit()
-        self.cDists.add_distribution(dist_obj, self.samples)
+        self.cDists.add_distribution(dist_name,
+                                     num_shape_facs,
+                                     shape_factors,
+                                     self.samples)
         row_index = self.addRow()
         self.updateRow(row_index, self.cDists.get_obj(-1))
         self.rmButton.setEnabled(True)
@@ -537,7 +543,7 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
         row = item.row()
         dist_obj = self.cDists.get_obj(row)
         dist_name = dist_obj.get_label()
-        PlotWindow(self,dist_obj, dist_name, plot_type="pplot")
+        PlotWindow(self, dist_obj, dist_name, plot_type="pplot")
 
 
     def makePDFCDF(self, item):
@@ -545,20 +551,17 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
         row = self.candDistsTable.currentRow()
         dist_obj = self.cDists.get_obj(row)
         dist_name = dist_obj.get_label()
-        PlotWindow(self,dist_obj, dist_name, plot_type="pdfcdf")
+        PlotWindow(self, dist_obj, dist_name, plot_type="pdfcdf")
 
     def showScipyDef(self):
         "Display syntax for declaring a RV using param values found with pplotpy"
         
         row = self.candDistsTable.currentRow()
         dist_obj = self.cDists.get_obj(row)
-        text = """
-import scipy.stats
-        
-%s""" % dist_obj.get_scipy_command()
         QtWidgets.QMessageBox.about(self,
                                     "SciPy Definition: " + dist_obj.get_label(),
-                                    text)
+                                    dist_obj.get_scipy_command())
+
 
 
 class PlotWindow(QtWidgets.QMainWindow):
@@ -572,7 +575,7 @@ class PlotWindow(QtWidgets.QMainWindow):
         super().__init__(parent=parent)
         self.dist_obj = dist_obj
         self.plot_canvas = PlotCanvas(self)
-        self.plot_type == plot_type
+        self.plot_type = plot_type
         if self.plot_type == "pplot":
             self.plot_canvas.pplot(dist_obj)
         elif self.plot_type == "pdfcdf":
@@ -667,102 +670,7 @@ class PlotCanvas(FigureCanvas):
         self.draw()
 
 
-class ShapeFactorBoundsWindow(QtWidgets.QMainWindow):
 
-    def __init__(self,
-                 parent,
-                 samples,
-                 dist_name,
-                 shape_fac_value,
-                 isChanged=False):
-        super().__init__(parent=parent)
-        
-        # Definite attributes
-        self.value = shape_fac_value
-        self.samples = samples
-        self.distribution = dist_name
-        self.changeBool = isChanged
-
-        self.initUI()
-        
-
-    def initUI(self):
-        """Set up user interface"""
-        
-        # Window Widget
-        self.setWindowTitle("Shape Factor Bounds")
-        self.resize(354, 153)
-        self.windowWidget = QtWidgets.QWidget(self)
-        self.windowWidget.setGeometry(QtCore.QRect(0, 0, 351, 131))
-        
-
-        # Labels
-        self.lowerBoundLabel = QtWidgets.QLabel()
-        self.lowerBoundLabel.setText("Lower Bound")
-        self.upperBoundLabel = QtWidgets.QLabel()
-        self.upperBoundLabel.setText("Upper Bound")
-        
-        # Line Edits
-        self.lowerBoundLineEdit = QtWidgets.QLineEdit()
-        self.upperBoundLineEdit = QtWidgets.QLineEdit()
-
-        # Button
-        self.calcPPCCButton = QtWidgets.QPushButton()
-        self.calcPPCCButton.setText("Calculate PPCC")
-        self.calcPPCCButton.clicked.connect(self.calcPPCC)
-
-
-        # Spacers
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-
-        
-        self.gridLayout = QtWidgets.QGridLayout()
-        self.gridLayout.addWidget(self.lowerBoundLabel, 0, 0, 1, 1)
-        self.gridLayout.addWidget(self.upperBoundLabel, 1, 0, 1, 1)
-        self.gridLayout.addWidget(self.lowerBoundLineEdit, 0, 1, 1, 1)
-        self.gridLayout.addWidget(self.upperBoundLineEdit, 1, 1, 1, 1)
-
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.addItem(spacerItem2)
-        self.horizontalLayout.addWidget(self.calcPPCCButton)
-        self.horizontalLayout.addItem(spacerItem3)
-
-
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.windowWidget)
-        self.verticalLayout.setContentsMargins(10, 10, 10, 10)
-        self.verticalLayout.addLayout(self.gridLayout)
-        self.verticalLayout.addLayout(self.horizontalLayout)
-
-        self.setCentralWidget(self.windowWidget)
-
-        self.statusbar = QtWidgets.QStatusBar(self)
-        self.setStatusBar(self.statusbar)
-
-        QtCore.QMetaObject.connectSlotsByName(self)
-        self.show()
-
-    def calcPPCC(self):
-        #try:
-            lowerBound = float(self.lowerBoundLineEdit.text()) 
-            upperBound = float(self.upperBoundLineEdit.text()) 
-            value = stats.ppcc_max(self.samples,
-                                        brack=(lowerBound,
-                                               upperBound),
-                                        dist=self.distribution)
-            super().updateShape1(value)
-            self.changeBool = True
-            self.statusbar.clearMessage()
-
-            self.close()
-            
-        #except ValueError:
-        #    self.statusbar.showMessage("Invalid entry for shape factors bounds")
-        #    return
-
-        #except:
-            #self.statusbar.showMessage("Error during calculation of shape factor")
-            #return
 
 
 if __name__ == "__main__":

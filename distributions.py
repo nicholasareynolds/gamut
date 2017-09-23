@@ -27,9 +27,15 @@ class CandidateDistributions:
         self.dists = list()
 
         
-    def add_distribution(self, dist_obj, samples):
+    def add_distribution(self,
+                         dist_name,
+                         shape_fac_count,
+                         shape_factors,
+                         samples):
+                         
         """Store samples to dist_obj, compute values, and append to 'dists' """
-
+        dist_obj = SciPyContDist(dist_name, shape_fac_count)
+        dist_obj.set_shapes(*shape_factors)
         self._calc_results(dist_obj, samples)
         self.dists.append(dist_obj)
 
@@ -40,12 +46,13 @@ class CandidateDistributions:
                                        dist=dist_obj.get_label(),
                                        sparams=(dist_obj.get_shapes() ))
         dist_obj.feed_pplot_data(results[0], results[1])
+        dist_obj.MLE_fit()
 
 
     def calc_all(self, samples, qmethod_str):
         """Perform prob. plot calcs for all distributions in self.dists."""
         for dist_obj in self.dists:
-            self._calc_results(dist_obj, samples, qmethod_str)
+            self._calc_results(dist_obj, samples)
 
 
     def get_count(self):
@@ -79,28 +86,27 @@ class SciPyContDist():
     """
     
     def __init__(self,
-                 label=None,
+                 label,
+                 shape_count=0,
                  loc=None,
-                 scale=None,
-                 shape_count=0):
+                 scale=None):
 
         self.label       = label
-        self.loc         = loc
-        self.scale       = scale
         self.shape_count = shape_count
+        self.loc         = None
+        self.scale       = None
         self.shapes      = dict()
 
 
     def get_label(self):
         return self.label
-
+    
     def get_shape_count(self):
         return self.shape_count
 
     
     def get_loc(self):
         return self.loc
-
 
     def set_loc(self, value):
         self.loc = value
@@ -114,12 +120,12 @@ class SciPyContDist():
         self.scale = value
 
 
-    def set_shapes(self, values):
-        [self.set_shape(value, ii) for ii, value in enumerate(values)]
+    def set_shapes(self, *values):
+        _ =[self._set_shape(value, ii) for ii, value in enumerate(values)]
 
 
-    def set_shape(self, value, index):
-        if index >= self.shape_count:
+    def _set_shape(self, value, index):
+        if (self.shape_count != 0) and (index >= self.shape_count):
             print("Error, specified index exceeds shape count")
             sys.exit()
         name = "shape" + str(index + 1)
@@ -127,7 +133,7 @@ class SciPyContDist():
 
 
     def get_shapes(self):
-        shape_vals = (v for k,v in self.shapes.items())
+        shape_vals = [v for k,v in self.shapes.items()]
         return shape_vals
 
 
@@ -157,12 +163,13 @@ class SciPyContDist():
 
 
     def MLE_fit(self):
+        samples=self.y
         fit_params = \
-            eval("scipy.stats.%s.fit(self.samples)" % self.get_label())
+            eval("scipy.stats.%s.fit(samples)" % self.get_label())
         scale = fit_params[-1]
         loc = fit_params[-2]
         shapes = fit_params[:-2]
-        self.fit_obj = SciPyContDist(label=self.get_label(),
+        self.fit_obj = SciPyContDist(self.get_label(),
                                      loc=loc,
                                      scale=scale,
                                      shape_count=len(shapes))
@@ -182,7 +189,9 @@ class SciPyContDist():
     def create_pplot(self, axes):
         """Draw probabaility plot of data on 'axes'"""
 
-        liny = lambda x: self.slope * x + self.intercept
+        # slope    <=> scale
+        # interept <=> location
+        liny = lambda x: self.scale * x + self.loc
         xmin, xmax = np.min(self.x), np.max(self.x)
         ymin, ymax = liny(xmin), liny(xmax)
         axes.plot(self.x,
