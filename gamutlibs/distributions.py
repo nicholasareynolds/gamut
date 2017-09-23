@@ -186,6 +186,9 @@ class SciPyContDist():
     def get_scipy_command(self):
         return self.scipy_command
 
+    def _create_scipy_obj(self):
+        self.scipy_obj = eval(self.get_scipy_command())
+
     def create_pplot(self, axes):
         """Draw probabaility plot of data on 'axes'"""
 
@@ -236,8 +239,9 @@ class SciPyContDist():
                  '-r',
                  label="CDF")
         ax2.set_ylabel("CDF Value")
-        ax2.plot(self.samples,
-                 self.quantiles,
+        quantiles = scipy.stats.morestats._calc_uniform_order_statistic_medians(len(self.x))
+        ax2.plot(self.y,
+                 quantiles,
                  'ro')
         ax2.legend(loc=1)
 

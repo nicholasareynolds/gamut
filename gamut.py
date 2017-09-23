@@ -1,16 +1,10 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import numpy as np
 import scipy.stats as stats
-from distributions import CandidateDistributions, SciPyContDist
-from shapefactordialog import ShapeFactorBoundsWindow
-import matplotlib
-matplotlib.rcParams['backend'] = "Qt5Agg"
-matplotlib.rcParams['font.size'] = 6
-matplotlib.use("Qt5Agg")
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+from gamutlibs.distributions import CandidateDistributions, SciPyContDist
+from GUIsubcomponents.sfdialog import ShapeFactorBoundsWindow
+from GUIsubcomponents.plotwindow import PlotWindow
 import sys
-import datetime
 
 pyVer = sys.version_info[0]  # i.e. 2 or 3
 if pyVer < 3:
@@ -309,7 +303,7 @@ Copyright (c) 2017 Nicholas A. Reynolds
         
 Licensed under the MIT License.
         
-To report bugs, request features, or see license information, please go to the GitHub repository:  https://github.com/nicholasareynolds/pplotpy
+To report bugs, request features, or see license information, please go to the GitHub repository:  https://github.com/nicholasareynolds/gamut
         
 This project uses probability plotting both (1) to help scientists and
 engineers identify the underlying distribution for his or her set of random
@@ -544,7 +538,7 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
         dist_obj = self.cDists.get_obj(row)
         dist_name = dist_obj.get_label()
         PlotWindow(self, dist_obj, dist_name, plot_type="pplot")
-
+        
 
     def makePDFCDF(self, item):
 
@@ -561,116 +555,6 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
         QtWidgets.QMessageBox.about(self,
                                     "SciPy Definition: " + dist_obj.get_label(),
                                     dist_obj.get_scipy_command())
-
-
-
-class PlotWindow(QtWidgets.QMainWindow):
-    """PlotWindow is a child window that hosts the probability plot canvas"""
-    
-    def __init__(self,
-                 parent,
-                 dist_obj,
-                 dist_name,
-                 plot_type="pplot"):
-        super().__init__(parent=parent)
-        self.dist_obj = dist_obj
-        self.plot_canvas = PlotCanvas(self)
-        self.plot_type = plot_type
-        if self.plot_type == "pplot":
-            self.plot_canvas.pplot(dist_obj)
-        elif self.plot_type == "pdfcdf":
-            self.plot_canvas.plot_pdfcdf(dist_obj)
-        self.windowWidget = QtWidgets.QWidget(self)
-        self.setWindowTitle(dist_name)
-        self.initUI()
-
-
-    def initUI(self):
-
-        # --- Declare Items to go in window ---
-        
-        # Save Button (Save File Dialog)
-        saveButton_plot = QtWidgets.QPushButton()
-        saveButton_plot.setText("Save Plot")
-
-        # action
-        saveButton_plot.clicked.connect(self.savePlot)
-
-        # Spacers
-        spacerItem1  = QtWidgets.QSpacerItem(40, 20,
-                                             QtWidgets.QSizePolicy.Expanding,
-                                             QtWidgets.QSizePolicy.Minimum)
-        spacerItem2  = QtWidgets.QSpacerItem(40, 20,
-                                             QtWidgets.QSizePolicy.Expanding,
-                                             QtWidgets.QSizePolicy.Minimum)
-
-        # --- Assemble ---
-        horizontalLayout = QtWidgets.QHBoxLayout()
-        horizontalLayout.addItem(spacerItem1)
-        horizontalLayout.addWidget(saveButton_plot)
-        horizontalLayout.addItem(spacerItem2)
-
-        verticalLayout = QtWidgets.QVBoxLayout(self.windowWidget)
-        verticalLayout.addWidget(self.plot_canvas)
-        verticalLayout.addLayout(horizontalLayout)
-
-        self.windowWidget.setFocus()
-        self.setCentralWidget(self.windowWidget)
-        self.show()
-
-    def savePlot(self, *args):
-        """Save a *.png of the present probability plot"""
-
-        fpath = QtWidgets.QFileDialog.getSaveFileName(self.windowWidget,
-                                                      "Specify destination",
-                                                      '',
-                                                      "Portable Networks Graphic (*.png)")[0]
-        if fpath:
-            try:
-                import matplotlib.pyplot as plt
-                axes = plt.axes()
-                
-                if self.plot_type == "pplot":
-                    self.dist_obj.create_pplot(axes)
-                elif self.plot_type == "pdfcdf":
-                    self.dist_obj.plot_pdfcdf(axes)
-                plt.savefig(fpath, dpi=600)
-                plt.close()
-            except:
-                pass
-    
-
-
-
-class PlotCanvas(FigureCanvas):
-    """Surfaces/axes onto which prob. plot is made, embedded in matplotlib window"""
- 
-    def __init__(self,
-                 parent=None):
-        fig = Figure()
-        self.axes = fig.add_subplot(111)
- 
-        FigureCanvas.__init__(self, fig)
-        self.setParent(parent)
-     
-        FigureCanvas.setSizePolicy(self,
-                                   QtWidgets.QSizePolicy.Expanding,
-                                   QtWidgets.QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
-
-  
-    def pplot(self, dist_obj):
-        # Pass axes from canvas to the distr. obj. for plotting
-        dist_obj.create_pplot(self.axes)
-        self.draw()
-
-    def plot_pdfcdf(self, dist_obj):
-        # Pass axes from canvas to the distr. obj. for plotting
-        dist_obj.plot_pdfcdf(self.axes)
-        self.draw()
-
-
-
 
 
 if __name__ == "__main__":
