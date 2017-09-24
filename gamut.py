@@ -80,8 +80,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # SciPy Distribution Label
         self.scipyDistsLabel = QtWidgets.QLabel()
-        self.scipyDistsLabel.setText("SciPy Distributions:")
-        
+        urlLink="<a href=\'https://docs.scipy.org/doc/scipy/reference/stats.html'>SciPy Distributions:</a>"
+        self.scipyDistsLabel.setText(urlLink)
+        self.scipyDistsLabel.setOpenExternalLinks(True)        
+
         # Supported Distributions Label
         self.scipyDistsList = QtWidgets.QListWidget()
         self.scipyDistsList.setEnabled(False)
