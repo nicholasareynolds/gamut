@@ -42,9 +42,9 @@ class OutlierWindow(QtWidgets.QDialog):
         
         # Window Widget
         self.setWindowTitle("Outlier Removal Options")
-        self.resize(354, 153)
+        self.resize(500, 153)
         self.windowWidget = QtWidgets.QWidget(self)
-        self.windowWidget.setGeometry(QtCore.QRect(0, 0, 351, 131))
+        self.windowWidget.setGeometry(QtCore.QRect(0, 0, 497, 131))
 
         self.testLabel= QtWidgets.QLabel()
         self.testLabel.setText("Generalized ESD (Iterative Maximum Residual Normed) Test:")
