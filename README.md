@@ -7,8 +7,7 @@
 
 [Probability plotting](http://www.itl.nist.gov/div898/handbook/eda/section3/probplot.htm) is a powerful method for quantifying goodness-of-fit with several advantages over other goodness-of-fit tests.  Unlike with the [Chi-Square goodness-of-fit test](http://www.itl.nist.gov/div898/handbook/eda/section3/eda35f.htm), probability plotting does not require that the samples be grouped into bins, whose size may impact the goodness-of-fit.  Unlike with [Kolmogerov-Smirnov goodness-of-fit test](http://www.itl.nist.gov/div898/handbook/eda/section3/eda35g.htm), wherein the values of a candidate distribution's parameter must be known a priori, the samples can be used to estimate the values of those parameters in probability plotting.  Lastly, unlike with [Anderson-Darling goodness-of-fit test](http://www.itl.nist.gov/div898/handbook/eda/section3/eda35e.htm), probability plotting does not depend on pre-tabulated values specific to each distribution and significance level.  
 
-Instead, probability plotting relies on the cumulative distribution function (CDF) of a distribution, with quantile values computed from the sample's order being used as the CDF values.  The ordered samples are plotted against the ordered statistic medians, which are calculated from the quantile estimate pairs of values are transformed through the sample algebraic operations necessary to transform the CDF equation into a linear equation.  The values are the distribution parameters are then estimated through a simple linear regression.
-
+Instead, probability plotting relies on [order statistics](http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm) and a distributions cumulative distribution function (CDF) to determine the goodness-of-fit.  The ordered samples are plotted against the ordered statistic medians.  In a linear regression of this data, the slope of this plot is an estimate of the scale factor of the distribution, the intercept is an estimate of the location factor of the distribution, and the coefficient of determination (R^2) is a measure of the goodness-of-fit.
 
 ## Getting Started
 
@@ -51,7 +50,7 @@ python gamut.py
 
 ## Basic Workflow
 
-A user provides a set of samples to *gamut* and selects which distributions he/she would like considered as candidate distributions for modeling the data.  *gamut* performs a probability plot linear regression of the data, and includes a coefficient of determination (R^2) to .  
+A user provides a set of samples to *gamut* and selects which distributions he/she would like considered as candidate distributions for modeling the data.  *gamut* performs a probability plot linear regression of the data, and which yields a coefficient of determination (R^2) and can be used identifying distributions that can be used to model the data set.  Once an ideal distribution has been identified, the values of its parameters are computed for the given samples using a maximum likelihood estimate.  
 
 ### Importing Samples
 
