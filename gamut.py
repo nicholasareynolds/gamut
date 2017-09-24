@@ -491,8 +491,13 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
                                          self.samples,
                                          dist_name)
         if dialog.exec_():
-            value = dialog.getValue()
-            self.shape1Text.setText(str(value))
+            lowerBound, upperBound = dialog.getBounds()
+            if lowerBound != None and upperBound != None:
+                value = stats.ppcc_max(self.samples,
+                                       brack=(lowerBound,
+                                              upperBound),
+                                       dist=dist_name)
+                self.shape1Text.setText(str(value))
 
     def addDistByButton(self):
         """Instantiate obj. from highlighted item; add to cand. distr. table."""

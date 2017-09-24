@@ -29,7 +29,8 @@ class ShapeFactorBoundsWindow(QtWidgets.QDialog):
         super().__init__(parent=parent)
 
         # Defaults
-        self.value = None
+        self.lowerBound = None
+        self.upperBound = None
 
         # Definite attributes
         self.samples = samples
@@ -97,12 +98,8 @@ class ShapeFactorBoundsWindow(QtWidgets.QDialog):
         Calculate the prob. plot correlation coeff. and store as self.value
         """
         try:
-            lowerBound = float(self.lowerBoundLineEdit.text()) 
-            upperBound = float(self.upperBoundLineEdit.text()) 
-            self.value = stats.ppcc_max(self.samples,
-                                    brack=(lowerBound,
-                                           upperBound),
-                                    dist=self.distribution)
+            self.lowerBound = float(self.lowerBoundLineEdit.text()) 
+            self.upperBound = float(self.upperBoundLineEdit.text()) 
             self.accept()
 
         except ValueError:
@@ -110,10 +107,10 @@ class ShapeFactorBoundsWindow(QtWidgets.QDialog):
         except:
             return
 
-    def getValue(self):
+    def getBounds(self):
         """
-        Return the value of the probability plot correlation coefficient.
+        Return the bounds of the shape factor.
         """
-        return self.value
+        return self.lowerBound, self.upperBound
 
 
