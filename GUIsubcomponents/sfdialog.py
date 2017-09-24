@@ -1,11 +1,26 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+###############################################################################
+#
+#    gamut
+#    Copyright (C) 2017,  Nicholas A. Reynolds
+#
+#    Full License Available in LICENSE file at
+#    https://github.com/nicholasareynolds/gamut
+#
+###############################################################################
+
+from PyQt5 import QtCore, QtWidgets
 import scipy.stats as stats
-import numpy as np
-import datetime
-
-
 
 class ShapeFactorBoundsWindow(QtWidgets.QDialog):
+    """
+    ShapeFactorBoundsWindow enables a user to specify the bounds of a
+    distribution's shape factor (provided it only has one shape factor), in
+    order to use the 'scipy.statsppcc_max' to compute the maximum likely shape
+    factor.
+    
+    ShapeFactorBoundsWindow is subordinate to the main gamut window, and
+    accepts the samples and the name if the distribution as arguments.
+    """
 
     def __init__(self,
                  parent,
@@ -23,13 +38,14 @@ class ShapeFactorBoundsWindow(QtWidgets.QDialog):
         
 
     def initUI(self):
-        """Set up user interface"""
-        
+        """
+        Set up user interface
+        """
         # Window Widget
         self.setWindowTitle("Shape Factor Bounds")
-        self.resize(354, 153)
+        self.resize(354, 110)
         self.windowWidget = QtWidgets.QWidget(self)
-        self.windowWidget.setGeometry(QtCore.QRect(0, 0, 351, 131))
+        self.windowWidget.setGeometry(QtCore.QRect(0, 0, 351, 90))
         
 
         # Labels
@@ -47,12 +63,15 @@ class ShapeFactorBoundsWindow(QtWidgets.QDialog):
         self.calcPPCCButton.setText("Calculate PPCC")
         self.calcPPCCButton.clicked.connect(self.calcPPCC)
 
-
         # Spacers
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(40, 20,
+                                            QtWidgets.QSizePolicy.Expanding,
+                                            QtWidgets.QSizePolicy.Minimum)
+        spacerItem3 = QtWidgets.QSpacerItem(40, 20,
+                                            QtWidgets.QSizePolicy.Expanding,
+                                            QtWidgets.QSizePolicy.Minimum)
 
-        
+        # Layout Objects
         self.gridLayout = QtWidgets.QGridLayout()
         self.gridLayout.addWidget(self.lowerBoundLabel, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.upperBoundLabel, 1, 0, 1, 1)
@@ -70,15 +89,13 @@ class ShapeFactorBoundsWindow(QtWidgets.QDialog):
         self.verticalLayout.addLayout(self.gridLayout)
         self.verticalLayout.addLayout(self.horizontalLayout)
 
-        #self.setCentralWidget(self.windowWidget)
-
-        #self.statusbar = QtWidgets.QStatusBar(self)
-        #self.setStatusBar(self.statusbar)
-
         QtCore.QMetaObject.connectSlotsByName(self)
         self.show()
 
     def calcPPCC(self):
+        """
+        Calculate the prob. plot correlation coeff. and store as self.value
+        """
         try:
             lowerBound = float(self.lowerBoundLineEdit.text()) 
             upperBound = float(self.upperBoundLineEdit.text()) 
@@ -89,20 +106,14 @@ class ShapeFactorBoundsWindow(QtWidgets.QDialog):
             self.accept()
 
         except ValueError:
-            #self.statusbar.showMessage("Invalid entry for shape factors bounds")
             return
         except:
-            #self.statusbar.showMessage("Error during calculation of shape factor")
             return
 
-
-            
     def getValue(self):
+        """
+        Return the value of the probability plot correlation coefficient.
+        """
         return self.value
 
 
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    ui = ShapeFactorBoundsWindow(None, None)
-    sys.exit(app.exec_())

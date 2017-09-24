@@ -1,9 +1,22 @@
+###############################################################################
+#
+#    gamut
+#    Copyright (C) 2017,  Nicholas A. Reynolds
+#
+#    Full License Available in LICENSE file at
+#    https://github.com/nicholasareynolds/gamut
+#
+###############################################################################
+
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 import numpy as np
 import scipy.stats as stats
 from gamutlibs.distributions import CandidateDistributions, SciPyContDist
+from gamutlibs.outlier_tests import GeneralizedExtremeStudentizedDeviate
 from GUIsubcomponents.sfdialog import ShapeFactorBoundsWindow
 from GUIsubcomponents.plotwindow import PlotWindow
+from GUIsubcomponents.outlierdialog import OutlierWindow
 import sys
 
 pyVer = sys.version_info[0]  # i.e. 2 or 3
@@ -26,6 +39,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cDists = CandidateDistributions()
         self.shape1Value=None
         self.shape1Changed=False
+        self.outlierBool=False
+        self.significance_level=0.05
         
         self.initUI()
         
@@ -59,7 +74,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Outliers Button
         self.outliersButton = QtWidgets.QPushButton()
         self.outliersButton.setEnabled(False)
-        self.outliersButton.setText("Remove Outliers")
+        self.outliersButton.setText("Outliers Settings")
+        #action
+        self.outliersButton.clicked.connect(self.handleOutliers)
 
         # SciPy Distribution Label
         self.scipyDistsLabel = QtWidgets.QLabel()
@@ -73,7 +90,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.scipyDistsList.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.scipyDistsList.setCurrentRow(1)
         # Action
-        #self.scipyDistsList.itemClicked.connect(self.unlockShapeBoxes)
         self.scipyDistsList.itemSelectionChanged.connect(self.unlockShapeBoxes)
         self.scipyDistsList.itemDoubleClicked.connect(self.addDistByDClick)
 
@@ -107,6 +123,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.PPCCButton = QtWidgets.QPushButton()
         self.PPCCButton.setEnabled(False)
         self.PPCCButton.setText("Calculate PPCC")
+        #action
         self.PPCCButton.clicked.connect(self.calcPPCC)
 
 
@@ -192,7 +209,7 @@ class MainWindow(QtWidgets.QMainWindow):
         line_4.setFrameShadow(QtWidgets.QFrame.Sunken)
         
         # --- Organize Widgets into Layout Boxes (bottom->up) ---
-        
+       
         # Samples Horizontal
         horizontalLayout = QtWidgets.QHBoxLayout()
         horizontalLayout.addWidget(self.selectFileButton)
@@ -290,8 +307,8 @@ class MainWindow(QtWidgets.QMainWindow):
         def wrapper(self, *args):
             function(self, *args)
             if self.cDists.get_count() > 0 and self.samples != None:
-                self.candListsTableWidget.clearContents()
-                self.cDists.calc_all(self.samples, self.qmethod)
+                self.candDistsTable.clearContents()
+                self.cDists.calc_all(self.samples)
                 self.updateResults()
         return wrapper   
 
@@ -329,18 +346,38 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
                                                       "Comma-Separated Values (*.csv)")[0]
         try:
             raw_data = np.loadtxt(fpath, delimiter=",")
-            self.samples = raw_data.flatten()
+            self.original_samples = raw_data.flatten()
+            self.samples = np.copy(self.original_samples)
+            self.outliersButton.setEnabled(True)
             self.statusbar.clearMessage()
             self.scipyDistsList.setEnabled(True)
             self.addButton.setEnabled(True)
             self.filePathLineEdit.setText(fpath)
         except:
+            self.original_samples = None
             self.samples = None
+            self.outliersButton.setEnabled(False)
             self.statusbar.showMessage("Error importing data")
             self.scipyDistsList.setDisabled(True)
             self.addButton.setDisabled(True)
             self.filePathLineEdit.setText("")
 
+    @updateExisting
+    def handleOutliers(self, *args):
+        dialog = OutlierWindow(self,
+                               self.outlierBool,
+                               self.significance_level)
+        if dialog.exec_():
+            self.outlierBool, self.significance_level = dialog.getSelection()
+            if self.outlierBool == True:
+                test = GeneralizedExtremeStudentizedDeviate(self.samples,
+                                                           significance_level=self.significance_level)
+                self.samples = test.get_remainders()
+                num_outliers = test.get_num_outliers()
+                self.statusbar.showMessage("%d outliers removed" % num_outliers)
+            else:
+                self.samples = np.copy(self.original_samples)
+                self.statusbar.clearMessage()
 
     def unlockShapeBoxes(self):
         
@@ -407,7 +444,7 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
     def updateResults(self):
         """Recalculate values from prob. plot and update the candidates table"""
 
-        self.cDists.calc_all(self.samples, self.qmethod)
+        self.cDists.calc_all(self.samples)
         for ii, dist in enumerate(self.cDists.dists):
             self.updateRow(ii, dist)
         

@@ -13,7 +13,7 @@ import sys
 
 class CandidateDistributions:
     """
-    Organize the candiate distribution objects for probability plotting.
+    Organize the candidate distribution objects for prob. plotting and curve fitting.
 
     The main attribute of CandidateDistributions is the list 'dists'.  User-
     specified distributions for consideration are added to and removed from
@@ -22,8 +22,9 @@ class CandidateDistributions:
     """
     
     def __init__(self):
-        """initialize the emtpy list for 'dists'"""
-
+        """
+        Initialize the emtpy list for 'dists'
+        """
         self.dists = list()
 
         
@@ -32,8 +33,9 @@ class CandidateDistributions:
                          shape_fac_count,
                          shape_factors,
                          samples):
-                         
-        """Store samples to dist_obj, compute values, and append to 'dists' """
+        """
+        Initialize distr. object, compute regress. values, and append obj 'dists'
+        """
         dist_obj = SciPyContDist(dist_name, shape_fac_count)
         dist_obj.set_shapes(*shape_factors)
         self._calc_results(dist_obj, samples)
@@ -41,7 +43,9 @@ class CandidateDistributions:
 
 
     def _calc_results(self, dist_obj, samples):
-        """Store samples; calc. quantiles, perform regression for dist_obj."""
+        """
+        Perform prob. plot regression and max. likelihood est. fit for dist_obj.
+        """
         results = scipy.stats.probplot(samples,
                                        dist=dist_obj.get_label(),
                                        sparams=(dist_obj.get_shapes() ))
@@ -49,15 +53,18 @@ class CandidateDistributions:
         dist_obj.MLE_fit()
 
 
-    def calc_all(self, samples, qmethod_str):
-        """Perform prob. plot calcs for all distributions in self.dists."""
+    def calc_all(self, samples):
+        """
+        Perform regression calcs for all distributions in self.dists.
+        """
         for dist_obj in self.dists:
             self._calc_results(dist_obj, samples)
 
 
     def get_count(self):
-        """Return the number of candidate distributions in self.dists"""
-
+        """
+        Return the number of candidate distributions in self.dists
+        """
         return len(self.dists)
 
 
@@ -205,13 +212,13 @@ class SciPyContDist():
                   [liny(xmin), liny(xmax)],
                   '-k',
                   label="Regression")
-        eq = "f(t) = %6.4E*t +  %6.4E\n$R^2$=%.4f" \
+        eq = "OV(TQ) = %6.4E*TQ +  %6.4E\n$R^2$=%.4f" \
             % (self.scale, self.loc, self.r2)
         axes.text(0.1*xmax + 0.9*xmin,
                  0.1*ymin + 0.9*ymax,
                  eq)
-        axes.set_xlabel("Theoretical quantiles")
-        axes.set_ylabel("Ordered Values")
+        axes.set_xlabel("Theoretical Quantiles (TQ)")
+        axes.set_ylabel("Ordered Values (OV)")
         axes.set_title(self.label)
         axes.legend(loc=4)
         axes.grid(which='major')
