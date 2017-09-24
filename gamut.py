@@ -82,7 +82,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.scipyDistsLabel = QtWidgets.QLabel()
         urlLink="<a href=\'https://docs.scipy.org/doc/scipy/reference/stats.html'>SciPy Distributions:</a>"
         self.scipyDistsLabel.setText(urlLink)
-        self.scipyDistsLabel.setOpenExternalLinks(True)        
+        self.scipyDistsLabel.setOpenExternalLinks(True)   
+        
 
         # Supported Distributions Label
         self.scipyDistsList = QtWidgets.QListWidget()
@@ -306,6 +307,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def updateExisting(function):
+        """
+        Define decorator to recompute prob plot regression and MLE param fit
+        """
         def wrapper(self, *args):
             function(self, *args)
             if self.cDists.get_count() > 0 and self.samples != None:
@@ -366,6 +370,9 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
 
     @updateExisting
     def handleOutliers(self, *args):
+        """
+        Initiate outliers dialog, and perform outlier actions based on user action
+        """
         dialog = OutlierWindow(self,
                                self.outlierBool,
                                self.significance_level)
@@ -382,7 +389,9 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
                 self.statusbar.clearMessage()
 
     def unlockShapeBoxes(self):
-        
+        """
+        Unlock/lock shape boxes based on selected SciPy distribution
+        """
         dist_name = self.scipyDistsList.currentItem().text()
         num_shape_params = self.distributions[dist_name]
         self.shape1Text.setText("")
@@ -441,18 +450,18 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
             self.shape4Text.setEnabled(True)
             self.PPCCButton.setEnabled(False)
 
-
-
     def updateResults(self):
-        """Recalculate values from prob. plot and update the candidates table"""
-
+        """
+        Recalc. values from prob. plot and MLE fit and update the candidates table
+        """
         self.cDists.calc_all(self.samples)
         for ii, dist in enumerate(self.cDists.dists):
             self.updateRow(ii, dist)
         
-        
     def updateRow(self, row_index, dist_obj):
-        """Query values from distr. object, and update cand. distr. table"""
+        """
+        Query values from distr. object, and update cand. distr. table
+        """
 
         self.candDistsTable.setItem(row_index,
                                     0,
@@ -478,9 +487,13 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
                                         ii,
                                         QtWidgets.QTableWidgetItem(text))
 
-
     def addRow(self):
-        """Add a blank row to the candidate distributions table."""
+        """
+        Add a blank row to the candidate distributions table.
+        
+        This is a preparation step in order to make room for a distribution's
+        values
+        """
 
         row_index = self.candDistsTable.rowCount()
         self.candDistsTable.insertRow(row_index)
@@ -488,6 +501,9 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
 
 
     def calcPPCC(self):
+        """
+        Open shape parameter bounds dialog, compute shape parameter accordingly
+        """
         dist_name = self.scipyDistsList.currentItem().text()
         dialog = ShapeFactorBoundsWindow(self,
                                          self.samples,
@@ -502,25 +518,29 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
                 self.shape1Text.setText(str(value))
 
     def addDistByButton(self):
-        """Instantiate obj. from highlighted item; add to cand. distr. table."""
+        """
+        Instantiate obj. from highlighted item; add to cand. distr. table.
+        """
         dist_name = self.scipyDistsList.currentItem().text()
         self.addDistribution(dist_name) 
 
-
     def addDistByDClick(self, item):
-        """Instantiate obj. from double-clicked item; calc vals, & add to table"""
+        """
+        Instantiate obj. from double-clicked item; calc vals, & add to table
+        """
         dist_name = item.text()
         self.addDistribution(dist_name) 
 
-
     def addDistribution(self, dist_name):
-        """Instantiate a dist. obj. by label; calc. values, and add to table."""
-
-        shape_factors = list()  # Initialize
+        """
+        Instantiate a dist. obj. by label; perform regression/fitting and add to table.
+        """
+        # Initialize
+        shape_factors = list() 
 
         num_shape_facs = self.distributions[dist_name]
 
-        # Check for valid number of shape factors specified
+        # Check that all shape factors validly specified
         for index, textBox in zip(range(num_shape_facs),
                                   [self.shape1Text,
                                    self.shape2Text,
@@ -548,7 +568,9 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
 
 
     def rmDistribution(self):
-        """ Remove the selected distribution from the cand. distr. table."""
+        """
+        Remove the selected distribution from the cand. distr. table.
+        """
 
         try:
             row = self.candDistsTable.currentRow()
@@ -562,9 +584,10 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
         except:
             self.statusbar.showMessage("Select a cand. distri. to remove")
 
-
     def rmAllDistributions(self):
-        """Clear all candidate distributions (empty table)"""
+        """
+        Clear all candidate distributions (empty table)
+        """
 
         self.candDistsTable.clearContents()
         self.candDistsTable.setRowCount(0)
@@ -574,25 +597,29 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
         self.scipyCallButton.setEnabled(False)
         self.pdfcdfButton.setEnabled(False)
 
-
     def makePPlot(self, item):
-        """Open a new window with prob. plot of double-clicked cand. distr."""
+        """
+        Open a new window with prob. plot of double-clicked cand. distr.
+        """
 
         row = item.row()
         dist_obj = self.cDists.get_obj(row)
         dist_name = dist_obj.get_label()
         PlotWindow(self, dist_obj, dist_name, plot_type="pplot")
         
-
     def makePDFCDF(self, item):
-
+        """
+        Open a new window with PDF/CDF curve of selected candiate distribution
+        """
         row = self.candDistsTable.currentRow()
         dist_obj = self.cDists.get_obj(row)
         dist_name = dist_obj.get_label()
         PlotWindow(self, dist_obj, dist_name, plot_type="pdfcdf")
 
     def showScipyDef(self):
-        "Display syntax for declaring a RV using param values found with pplotpy"
+        """
+        Display SciPy syntax instantiating a frozen dist. w/ MLE-fit param values
+        """
         
         row = self.candDistsTable.currentRow()
         dist_obj = self.cDists.get_obj(row)
@@ -602,7 +629,6 @@ As a courtesy, please acknowledge use of gamut in any publications/reports to wh
 
 
 if __name__ == "__main__":
-    import sys
     app = QtWidgets.QApplication(sys.argv)
     ui = MainWindow()
     sys.exit(app.exec_())

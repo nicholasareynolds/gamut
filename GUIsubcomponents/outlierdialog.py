@@ -11,11 +11,24 @@
 from PyQt5 import QtCore, QtWidgets
 
 class OutlierWindow(QtWidgets.QDialog):
+    """
+    OutlierWindow is a dialog from the main gamut window.  A user can toggle
+    whether or not to remove outliers by the generalized extreme Studentized
+    deviated (ESD) test.  If so, the user specifies the significance level to 
+    use in determining what constitutes an outlier.
+    
+    The main attributes are 'is_testing_for_outliers' and 'significance level',
+    which can be retrieved with the 'getSelection' method.  This informs
+    gamut what to do with the data set.
+    """
 
-    def __init__(self, parent, outlier_boolean, significance_level):
+    def __init__(self,
+                 parent,
+                 outlier_boolean,
+                 significance_level):
         super().__init__(parent=parent)
 
-        # Defaults
+        # Open window the current settings from gamut window
         self.is_testing_for_outliers = outlier_boolean
         self.significance_level = significance_level
         

@@ -62,23 +62,38 @@ class GeneralizedExtremeStudentizedDeviate:
         self._compute_outliers()
 
     def _compute_outliers(self):
+        """
+        Remove outliers according to the Generalized extreme Studentized
+        deviate test; store outliers, and remaining samples as attributes.
+        
+        Reference:
+        Generalized extreme Studentized deviate test
+        http://www.itl.nist.gov/div898/handbook/eda/section3/eda35h3.htm
+        """
+
+        # maximum normed residuals (MNR) statistic (for descreasing data set)
+        max_norm_residuals = np.zeros(self.N)
+        
+        # True table for (MNR > critical value), initialized
         statistic_exceeds_crit = np.zeros(self.N, dtype=int)
-        potential_outliers = np.zeros(self.N)
+        
+        # maximum normed residuals (for descreasing data set)
+        max_norm_residuals = np.zeros(self.N)
 
         for ii, ((sample, R), lamb) \
             in enumerate(zip(self._compute_all_test_statistics(),
                              self._compute_critical_values())):
-            potential_outliers[ii] = sample
+            max_norm_residuals[ii] = sample
             if R > lamb:
                 statistic_exceeds_crit[ii] = 1
         self.num_outliers = np.nonzero(statistic_exceeds_crit)[0][-1] + 1
-        self.outliers = potential_outliers[:self.num_outliers]
+        self.outliers = max_norm_residuals[:self.num_outliers]
         mask = [1 if sample in self.outliers else 0 for sample in self.samples]
         self.remainders = np.delete(self.samples,np.nonzero(mask)[0])
         
     def _compute_all_test_statistics(self):
         """
-        Generate nor
+        Yield the maximum normed residuals for samples as outliers are removed
         """
         samples = self.samples
         n = self.N
@@ -97,7 +112,7 @@ class GeneralizedExtremeStudentizedDeviate:
 
     def _compute_critical_values(self):
         """
-        Yield the critical t-values based on samples sizes 1-N. 
+        Yield the critical t-values based on samples sizes N to 1. 
         """
         
         N = self.N
@@ -116,16 +131,26 @@ class GeneralizedExtremeStudentizedDeviate:
             
 
     def get_num_outliers(self):
+        """
+        Return the number of outliers in the data set
+        """
         return self.num_outliers
     
     def get_outliers(self):
+        """
+        Return a list of outliers from the data set
+        """
         return self.outliers
     
     def get_remainders(self):
+        """
+        Return the data set with outliers removed
+        """
         return self.remainders
          
 
 # UNIT TEST
+#    (from http://www.itl.nist.gov/div898/handbook/eda/section3/eda35h3.htm)
 if __name__ == "__main__":
     data = [-0.25, 0.68, 0.94, 1.15, 1.20, 1.26, 1.26,
              1.34, 1.38, 1.43, 1.49, 1.49, 1.55, 1.56,

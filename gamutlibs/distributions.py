@@ -13,12 +13,12 @@ import sys
 
 class CandidateDistributions:
     """
-    Organize the candidate distribution objects for prob. plotting and curve fitting.
+    Organize the candidate distribution objects for prob. plotting and MLE fitting.
 
-    The main attribute of CandidateDistributions is the list 'dists'.  User-
-    specified distributions for consideration are added to and removed from
-    this list.  This list also serves as an iterable item when data and/or
-    quantile calculation method are changed.
+    CandidateDistributions is the backend of 'gamut'. The main attribute of
+    CandidateDistributions is the list 'dists'.  User- specified distributions
+    for consideration are added to and removed from this list.  This list also
+    serves as an iterable item when data or outlier information is changed.
     """
     
     def __init__(self):
@@ -63,25 +63,31 @@ class CandidateDistributions:
 
     def get_count(self):
         """
-        Return the number of candidate distributions in self.dists
+        Return the current number of candidate distributions in self.dists
         """
         return len(self.dists)
 
 
     def get_obj(self,index):
-        """Get distribution object using its index in the list."""
+        """
+        Return distribution object using its rank in the list.
+        """
 
         return self.dists[index]
 
 
     def remove_all(self):
-        """Empty the list of candidate distributions."""
+        """
+        Empty the list of candidate distributions.
+        """
 
         self.dists = list()
 
         
     def remove_dist(self, dist_index):
-        """Remove candidate distribution by its index in self.dists."""
+        """
+        Remove candidate distribution by its index in self.dists.
+        """
         
         self.dists.pop(dist_index)
 
@@ -90,6 +96,32 @@ class CandidateDistributions:
 class SciPyContDist():
     """
     Register, instantiate, and define methods for supported distributions.
+
+
+    SciPyContDist is the distribution object for the distributions that make up
+    the CandidateDistributions.dists list attribute.  SciPyConstDist is called
+    from within the CandidateDistributions method 'add_distribution'.
+    
+    SciPyContDist also contains methods which call the scipy.stats.probplot
+    and scipy.stats.label.fit (MLE) functions that are used to fit the
+    distribution to the data.
+    
+    Usage:
+
+    distribution_instance = SciPyContDist(label, **kwargs)
+        
+    where:
+        - label is the SciPy moniker for a continuous distribution
+        - shape_count is the number of shape parameters present in the
+          distribution (Default=0)
+        - loc is the value of the distribution's location parameter.
+          (Default = None)
+        - scale is the value of the distribution's scale parameter.
+        
+    Currently, 'gamut' has database of SciPy continuous distributions and
+    associated values for shape_count;  these values are simulatenous populated
+    when SciPyContDist is instantiated within
+    CandidateDistributions.add_distribution using an dict.iteritems() loop.
     """
     
     def __init__(self,
@@ -106,50 +138,79 @@ class SciPyContDist():
 
 
     def get_label(self):
+        """
+        Return the SciPy moniker of this instance of SciPyContDist
+        """
         return self.label
     
     def get_shape_count(self):
+        """
+        Return the number of shape parameters belonging to this SciPyContDist instance.
+        """
         return self.shape_count
 
     
     def get_loc(self):
+        """
+        Return the value of the location parameter
+        """
         return self.loc
 
     def set_loc(self, value):
+        """
+        Assign a value to the location parameter attribute, self.loc
+        """
         self.loc = value
-
         
     def get_scale(self):
+        """
+        Return the value of the scale parameter
+        """
         return self.scale
 
-
     def set_scale(self, value):
+        """
+        Assign a value to the scale parameter attribute, self.scale
+        """
         self.scale = value
 
-
     def set_shapes(self, *values):
+        """
+        Assign values to the shape parameters dict attribute, self.shapes
+        """
         _ =[self._set_shape(value, ii) for ii, value in enumerate(values)]
 
-
     def _set_shape(self, value, index):
+        """
+        Update the shape parameter dictionary attribute with a new value for
+        shape parameter of rank index
+        """
         if (self.shape_count != 0) and (index >= self.shape_count):
             print("Error, specified index exceeds shape count")
             sys.exit()
         name = "shape" + str(index + 1)
         self.shapes.update({name : value})       
 
-
     def get_shapes(self):
+        """
+        Return a sequential list of the shape parameter values
+        """
         shape_vals = [v for k,v in self.shapes.items()]
         return shape_vals
 
 
     def get_r2(self):
+        """
+        Return the coefficient of determination for the probability plot
+        """
         return self.r2
 
     def feed_pplot_data(self,
                         plot_data,
                         lin_regress_data):
+        """
+        Store results from prob. plot regression as attributes
+        """
         self.x     = plot_data[0]               # quantiles
         self.y     = plot_data[1]               # ordered samples
         self.scale = lin_regress_data[0]        # slope
@@ -158,7 +219,9 @@ class SciPyContDist():
 
 
     def _calc_pdf_cdf(self, num_points=1000):
-        """Populate a pdf-cdf data from scipy object."""
+        """
+        Construct PDF and CDF curves of fit the SciPy distribution
+        """
 
         # Note: do not include 1st or last points, which may correspond to 
         # +/- infinite
@@ -170,6 +233,9 @@ class SciPyContDist():
 
 
     def MLE_fit(self):
+        """
+        Fit dist. parameters to data using maximum likelihood estimate method
+        """
         samples=self.y
         fit_params = \
             eval("scipy.stats.%s.fit(samples)" % self.get_label())
@@ -188,30 +254,37 @@ class SciPyContDist():
             self.scipy_command += "%10.6e, " % shape
         self.scipy_command += "loc=%10.6e, scale=%10.6e)" % (loc, scale)
         
-        self.scipy_obj = eval(self.scipy_command)
+        # Instantiate a frozen SciPy distribution using MLE fit param. values
+        self.scipy_obj = self.scipy_obj = eval(self.get_scipy_command())
 
     def get_scipy_command(self):
+        """
+        Return the python command to instantiate a frozen SciPy distribution,
+        using the values the the MLE fitting
+        """
         return self.scipy_command
 
-    def _create_scipy_obj(self):
-        self.scipy_obj = eval(self.get_scipy_command())
-
     def create_pplot(self, axes):
-        """Draw probabaility plot of data on 'axes'"""
-
+        """
+        Draw probabaility plot of data on 'axes'
+        """
         # slope    <=> scale
         # interept <=> location
+        
+        # Linear regression line
         liny = lambda x: self.scale * x + self.loc
         xmin, xmax = np.min(self.x), np.max(self.x)
         ymin, ymax = liny(xmin), liny(xmax)
-        axes.plot(self.x,
-                  self.y,
-                  'ro',
-                  label="Samples")
         axes.plot([xmin, xmax],
                   [liny(xmin), liny(xmax)],
                   '-k',
                   label="Regression")
+
+        axes.plot(self.x,
+                  self.y,
+                  'ro',
+                  label="Samples")
+
         eq = "OV(TQ) = %6.4E*TQ +  %6.4E\n$R^2$=%.4f" \
             % (self.scale, self.loc, self.r2)
         axes.text(0.1*xmax + 0.9*xmin,
@@ -225,9 +298,9 @@ class SciPyContDist():
 
 
     def plot_pdfcdf(self, axes, samples=True):
-        """Draw pdf and cdfs of resulting scipy distribution object"""
-        
-        self._create_scipy_obj()
+        """
+        Draw PDF and CDF fitted SciPy distribution on the provides axes
+        """
         self._calc_pdf_cdf()
         
         # PDF Plot
@@ -246,13 +319,17 @@ class SciPyContDist():
                  '-r',
                  label="CDF")
         ax2.set_ylabel("CDF Value")
-        quantiles = scipy.stats.morestats._calc_uniform_order_statistic_medians(len(self.x))
+        
+        # Filliben's estimate of the ordered statistic medians
+        #     Filliben, J. J. (February 1975), The Probability Plot Correlation
+        #     Coefficient Test for Normality, Technometrics, pp. 111-117.
+        quantiles = \
+            scipy.stats.morestats._calc_uniform_order_statistic_medians(len(self.x))
+
         ax2.plot(self.y,
                  quantiles,
                  'ro')
         ax2.legend(loc=1)
-
-
     
 # Substantial portions of this file were taken from:
 # 

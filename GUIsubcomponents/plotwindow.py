@@ -18,8 +18,8 @@ from matplotlib.figure import Figure
 
 class PlotWindow(QtWidgets.QMainWindow):
     """
-    PlotWindow is a child window to gamut that hosts plot canvases
-    
+    PlotWindow is a child window to gamut that hosts plot canvases for the
+    PDF/CDF and the Probability Plots
     """
     
     def __init__(self,
